@@ -1,0 +1,84 @@
+.model small
+.stack 100h
+
+.data
+    prompt_msg db 'Enter a sentence (max 100 characters): $'
+    histogram_msg db 'Histogram (Occurrences): $'
+    sentence db 100 dup(?)    	; Variable to store the sentence
+    histogram db 26 dup(0)    	; Histogram to store letter occurrences
+    colors db 26 dup(0)       	; Color codes for each histogram bar
+
+.code
+    mov ax, @data
+    mov ds, ax
+
+    mov ah, 09h               	; Prompt the user to enter the sentence
+    mov dx, OFFSET prompt_msg
+    int 21h
+
+    mov ah, 0Ah               	; Read the sentence from the user
+    mov dx, OFFSET sentence
+    int 21h
+
+    mov si, OFFSET sentence   	; Point to the sentence
+    xor cx, cx                	; Initialize character counter
+
+count_characters:
+    lodsb                     	; Load next character from sentence
+    cmp al, 0Dh               	; Check if it's the "Enter key"
+    je display_histogram      	; If it is -> jump to display_histogram
+
+    sub al, 'A'               	; Convert uppercase letters to lowercase
+    cmp al, 'Z' - 'A'         	; Check if it's a letter (A-Z) or not
+    ja count_characters       	; If it's not -> go back to count_characters
+
+    inc histogram[al]         	; Increment the count of the letter found in the histogram
+    inc cx                    	; Increment the total character counter
+
+    cmp cx, 100               	; Check if we have reached the maximum number of characters
+    jge display_histogram     	; If we have -> jump to display_histogram
+    jmp count_characters      	; Otherwise -> go back to count_characters
+
+display_histogram:
+    mov ah, 09h               	; Display histogram message
+    mov dx, OFFSET histogram_msg
+    int 21h
+
+    mov dl, 0
+    mov ah, 02h
+    xor bh, bh                	; Display page 0
+    mov cx, 26                	; Loop counter
+
+print_histogram:
+    add dl, 'A'               	; Convert index to letter
+    mov al, histogram[dl - 'A'] ; Get count from the histogram
+
+    mov bl, al                	; Copy count to BL for color determination
+    mov al, colors[dl - 'A']  	; Get color code for the histogram bar
+
+    mov ah, 09h               	; Print the histogram bar using attribute
+    mov cx, ax                	; CX = Count + Attribute
+    mov al, 219               	; Character for the histogram bar
+    int 10h                   	; BIOS video interrupt
+
+    mov ah, 02h               	; Print character function
+    mov dl, dl                	; Print the corresponding letter
+    int 21h
+
+    mov ah, 02h               	; Print character function
+    mov dl, al                	; Put the number of occurrences in DL
+    add dl, '0'               	; Convert count to ASCII
+    int 21h                   	; Print the number of occurrences
+
+    mov ah, 02h               	; Print character function
+    mov dl, ' '               	; Put a space in DL to separate the histogram bars
+    int 21h                   	; Print the space
+
+    inc dl                    	; Move to the next letter
+    loop print_histogram
+
+    mov ah, 4Ch               	; Exit program
+    xor al, al                	; Return exit code 0
+    int 21h
+
+end
