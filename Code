@@ -28,9 +28,21 @@ count_characters:
     cmp al, 0Dh               	; Check if it's the "Enter key"
     je display_histogram      	; If it is -> jump to display_histogram
 
-    sub al, 'A'               	; Convert uppercase letters to lowercase
-    cmp al, 'Z' - 'A'         	; Check if it's a letter (A-Z) or not
-    ja count_characters       	; If it's not -> go back to count_characters
+    cmp al, 'A'
+    jl not_a_letter
+    cmp al, 'Z'
+    jle is_uppercase
+    cmp al, 'a'
+    jl not_a_letter
+    cmp al, 'z'
+    jg not_a_letter
+    is_uppercase:
+    ; Code for uppercase letter
+    jmp end_check
+    not_a_letter:
+    ; Code for when al is not a letter
+    end_check:
+
 
     inc histogram[al]         	; Increment the count of the letter found in the histogram
     inc cx                    	; Increment the total character counter
